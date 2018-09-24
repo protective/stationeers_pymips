@@ -2,7 +2,7 @@ import pytest
 
 from mips_vm import MIPSVM
 
-def test_input():
+def test_labels():
     program = """
 room_sensor = label(d0, "Sensor")
 exit_pump = label(d1, "VolumePump")
@@ -18,11 +18,21 @@ while True:
 """
 
     vm = MIPSVM(program)
-    vm.execute({('d1', 'P1'): 1, ('d1', 'P2'): 10, ('d1', 'P3'): 100})
-    assert vm.get_variable('o') == 111
-    vm.execute({('d1', 'P2'): 5})
-    assert vm.get_variable('o') == 106
 
+    vm.execute({('d0', 'Temperature'): 1, ('d1', 'On'): 0,  ('d2', 'Pressure'): 100})
+    assert vm.get_variable(('d1', 'On')) == 0
+
+    vm.execute({('d0', 'Temperature'): 1, ('d1', 'On'): 0,  ('d2', 'Pressure'): 5700})
+    assert vm.get_variable(('d1', 'On')) == 1
+
+    vm.execute({('d0', 'Temperature'): 1, ('d1', 'On'): 0,  ('d2', 'Pressure'): 100})
+    assert vm.get_variable(('d1', 'On')) == 0
+
+    vm.execute({('d0', 'Temperature'): 26, ('d1', 'On'): 0,  ('d2', 'Pressure'): 100})
+    assert vm.get_variable(('d1', 'On')) == 1
+
+    vm.execute({('d0', 'Temperature'): 10, ('d1', 'On'): 0,  ('d2', 'Pressure'): 100})
+    assert vm.get_variable(('d1', 'On')) == 0
 
 
 

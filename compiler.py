@@ -27,75 +27,13 @@ class TreeIndenter(Indenter):
     tab_len = 4
 
 
-a = """
-
-mem_hydro_system_active  = label(d0, "Memory")
-atmo_sensor = label(d1, "Sensor")
-pipe_sensor = label(d2, "HydroPipe")
-heater = label(d3, "Heater")
-hydro_filter_out = label(d4, "HydroFilterOut")
-x_filter_in = label(d5, "XFilterin")
-
-
-while True:
-    hydro_moles = load(pipe_sensor, TotalMoles)
-    hydro_system_active = load(mem_hydro_system_active, Setting)
-    temprature = load(atmo_sensor, Temperature)
-    pressure = load(atmo_sensor, Pressure)
-    hydro_levels = load(atmo_sensor, RatioVolatiles)
-
-    if hydro_system_active:
-        if pressure > 0.6:
-            save(0, x_filter_in, On)
-        elif pressure < 0.5:
-            save(1, x_filter_in, On)
-
-        if temprature > 293:
-            save(0, heater, On)
-        elif temprature < 283 and pressure > 0.3:
-            save(1, heater, On)
-
-        if hydro_levels > 0.1:
-            save(1, hydro_filter_out, On)
-        elif hydro_levels < 0.02:
-            save(0, hydro_filter_out, On)
-
-        if hydro_moles < 1000 and temprature > 283 and pressure > 0.3:
-            save(1, db, Setting)
-        elif hydro_moles > 1200:
-            save(0, db, Setting)
-    else:
-        save(1, hydro_filter_out, On)
-        save(0, db, Setting)
-        save(0, x_filter_in, On)
-        save(0, heater, On)
-    yield
-    yield
-    yield
-    yield
-"""
-#
-
-b = """
-room_sensor = label(d0, "Sensor")
-dump_pump = label(d1, "VolumePump")
-heat_pipe_sensor = label(d2, "PipeAnalyzer")
-
-while True:
-    room_tmp = load(room_sensor, Temperature) - 273.15
-    if room_tmp > 25 or load(heat_pipe_sensor, Pressure) > 4000:
-        save(1, dump_pump, On)
-    elif room_tmp < 24:
-        save(0, dump_pump, On)
-    yield
-"""
-
 class Device:
     def __init__(self, device: str, prop: str):
         self.device = device
         self.prop = prop
 
-class Compiler():
+
+class Compiler:
     def __init__(self):
         self.stack_counter = -1
         self.idtable = {'out': 'o'}
@@ -141,8 +79,8 @@ class Compiler():
             r = self.visit(check_direct_access, check_direct_access=True)
             if r:
                 yield f'r{self.stack_counter}'
-            #if check_direct_access and check_direct_access.data == 'loc':
-            #    yield f'r{self.stack_counter}'
+                # if check_direct_access and check_direct_access.data == 'loc':
+                #    yield f'r{self.stack_counter}'
                 return
 
         self.stack_counter += 1
@@ -365,7 +303,7 @@ class Compiler():
             self._add_instruction(f'{opper} {dst} {r0} {r1}', f'{r0} {opper} {r1} -> {dst}')
         else:
             if op.value == '<':
-                self._add_instruction(f'slt {dst} {r0} {r1}',  f'{r0} < {r1} -> {dst}')
+                self._add_instruction(f'slt {dst} {r0} {r1}', f'{r0} < {r1} -> {dst}')
             elif op.value == '>':
                 self._add_instruction(f'slt {dst} {r1} {r0}', f'{r0} > {r1} -> {dst}')
             elif op.value == '==':
@@ -447,7 +385,7 @@ class Compiler():
             self._push_copy_inst(src=r0, dst=dst)
 
     def var(self, var, **kwargs):
-        name : str = var.children[0].value
+        name: str = var.children[0].value
 
         if name in self._stmt_lookahead_ban:
             self._stmt_lookahead_fail = True
@@ -518,40 +456,45 @@ class Compiler():
         return Device(device, prop)
 
 
-def compile_file(file: Path):
+def compile_file(file: Path, debug=False):
     file_o = Path(f'{file}.mips')
     with file.open('r') as fd_r, file_o.open('w') as fd_w:
-
         a = fd_r.read()
         compiler = Compiler()
         compiler.compile(a)
 
         output = ""
-        #output = a.strip() + '\n'
+        if debug:
+            output = a.strip() + '\n'
 
-        #output += "Begin Python**************************\n"
-        #output += a.strip(a) + '\n'
-        #output += "End Python*****************************\n"
+            output += "Begin Python**************************\n"
+            output += a.strip(a) + '\n'
+            output += "End Python*****************************\n"
 
-        #output += "MIPS***********************************\n"
-        #for i, (line, desc) in enumerate(compiler.final_program):
-        #    output += f'{line:25} {i:2}: {desc}\n'
+            output += "MIPS***********************************\n"
+            for i, (line, desc) in enumerate(compiler.final_program):
+               output += f'{line:25} {i:2}: {desc}\n'
 
-        #output += "MIPS***********************************\n"
+            output += "MIPS***********************************\n"
         for i, (line, desc) in enumerate(compiler.final_program):
             output += f'{line}\n'
         print(output)
         fd_w.write(output)
+
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('-i', '--input', dest='input',
                         help='folder or file for scripts')
+    parser.add_argument('--debug', dest='debug', default=False,
+                        help='Output additional debug information for the code')
     args = parser.parse_args()
     a = Path(args.input)
 
     if Path.is_dir(a):
         for child in a.iterdir():
             if child.suffix == '.py':
-                compile_file(child)
+                compile_file(child, args.debug)
+    elif a.suffix == '.py':
+        compile_file(a, args.debug)
