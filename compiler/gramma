@@ -1,0 +1,97 @@
+
+root: (_NEWLINE | stmt)*
+
+?stmt: simple_stmt | compound_stmt
+?simple_stmt: small_stmt (";" small_stmt)* [";"] _NEWLINE
+?small_stmt: (expr_stmt | pass_stmt | flow_stmt)
+?expr_stmt: test -> stmt
+         | test "=" test -> assignmentstmt
+
+!augassign: ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "**=" | "//=")
+// For normal and annotated assignments, additional restrictions enforced by the interpreter
+pass_stmt: "pass"
+?flow_stmt: break_stmt | continue_stmt | yield_stmt
+break_stmt: "break"
+continue_stmt: "continue"
+yield_stmt: yield_expr
+
+compound_stmt: if_stmt | while_stmt | for_stmt
+if_stmt: "if" test ":" suite ("elif" test ":" suite)* ["else" ":" suite]
+while_stmt: "while" test ":" suite ["else" ":" suite]
+for_stmt: "for" NAME "in" test ":" suite ["else" ":" suite]
+
+suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
+
+?test: or_test ["if" or_test "else" test]
+?or_test: and_test ("or" and_test)*
+?and_test: not_test ("and" not_test)*
+?not_test: "not" not_test -> not
+         | comparison
+?comparison: expr (_comp_op expr)*
+
+?expr: xor_expr ("|" xor_expr)*
+?xor_expr: and_expr ("^" and_expr)*
+?and_expr: shift_expr ("&" shift_expr)*
+?shift_expr: arith_expr (_shift_op arith_expr)*
+?arith_expr: term (_add_op term)*
+?term: factor (_mul_op factor)*
+?factor: _factor_op factor | power
+
+?power: atom_expr ["**" factor]
+
+
+!_factor_op: "+"|"-"|"~"
+!_add_op: "+"|"-"
+!_shift_op: "<<"|">>"
+!_mul_op: "*"|"@"|"/"|"%"|"//"
+// <> isn't actually a valid comparison operator in Python. It's here for the
+// sake of a __future__ import described in PEP 401 (which really works :-)
+!_comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="
+
+
+?atom_expr: atom_expr "(" [arguments] ")"   -> call
+          | atom_expr "[" subscriptlist "]" -> attr_get
+          | atom_expr "." NAME              -> dotaccess
+          | atom
+
+?atom:  NAME -> var
+     | number | string+
+     | "(" test ")"
+     | "None"    -> const_none
+     | "True"    -> const_true
+     | "False"   -> const_false
+
+subscriptlist: subscript ("," subscript)* [","]
+subscript: test
+arguments: argvalue ("," argvalue)*
+
+?argvalue: test
+
+// not used in grammar, but may appear in "node" passed from Parser to Compiler
+encoding_decl: NAME
+
+yield_expr: "yield_tick"
+
+number: DEC_NUMBER | HEX_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
+string: STRING | LONG_STRING
+// Tokens
+
+NAME: /[a-zA-Z_]\w*/
+COMMENT: /#[^\n]*/
+_NEWLINE: ( /\r?\n[\t ]*/ | COMMENT )+
+
+
+STRING : /[ubf]?r?("(?!"").*?(?<!\\)(\\\\)*?"|'(?!'').*?(?<!\\)(\\\\)*?')/i
+LONG_STRING: /[ubf]?r?(""".*?(?<!\\)(\\\\)*?"""|'''.*?(?<!\\)(\\\\)*?''')/is
+
+DEC_NUMBER: /0|[1-9]\d*/i
+HEX_NUMBER.2: /0x[\da-f]*/i
+OCT_NUMBER.2: /0o[0-7]*/i
+BIN_NUMBER.2 : /0b[0-1]*/i
+FLOAT_NUMBER.2: /((\d+\.\d*|\.\d+)(e[-+]?\d+)?|\d+(e[-+]?\d+))/i
+IMAG_NUMBER.2: /\d+j|${FLOAT_NUMBER}j/i
+
+%ignore /[\t \f]+/  // WS
+%ignore /\\[\t \f]*\r?\n/   // LINE_CONT
+%ignore COMMENT
+%declare _INDENT _DEDENT
