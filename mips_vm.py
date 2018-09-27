@@ -41,6 +41,7 @@ class MIPSVM:
             self.parse(mips)
             print()
             print(mips)
+            print()
             pass
 
     def __str__(self):
@@ -110,7 +111,7 @@ class MIPSVM:
         elif inst == 'l':
             self._set_variable(args[1], self._get_variable((args[2], args[3])))
         elif inst == 's':
-            self._set_variable((args[1], args[2]), args[3])
+            self._set_variable((args[1], args[2]), self._get_variable(args[3]))
         elif inst == 'move':
             self._set_variable(args[1], self._get_variable(args[2]))
         elif inst == 'and':

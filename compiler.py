@@ -34,7 +34,8 @@ class Device:
 
 
 class Compiler:
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
         self.stack_counter = -1
         self.idtable = {'out': 'o'}
         self.device_table = {}
@@ -52,6 +53,8 @@ class Compiler:
         parser = Lark(grammar, start='root', parser='lalr', postlex=TreeIndenter())
 
         tree = parser.parse(program)
+        if self.debug:
+            print(tree)
         self.visit(tree)
         self.resolve_labels()
         self.validate()
@@ -342,16 +345,45 @@ class Compiler:
         if check_direct_access:
             return False
         dst = self.cur_stack_dst(store_dst=store_dst)
+        return dst
+
+    def call(self, expr, left_type=None, check_direct_access=None, store_dst=None):
+        if check_direct_access:
+            return False
+        dst = self.cur_stack_dst(store_dst=store_dst)
+        ret = None
         if isinstance(expr.children[0], Tree):
             tree = expr.children[0]
-            if tree.children[0].value in self.vtable:
-                arguments = expr.children[1]
-                ret = self.vtable[tree.children[0].value](
-                    dst,
-                    arguments.children)
+            if len(expr.children) > 1 and isinstance(expr.children[1], Tree) and expr.children[1].data == 'arguments':
+                if tree.children[0].value in self.vtable:
+                    arguments = expr.children[1]
+                    ret = self.vtable[tree.children[0].value](
+                        dst,
+                        arguments.children)
         if ret:
             return ret
         return dst
+
+    def attr_get(self, expr, left_type=None, check_direct_access=None, store_dst=None):
+        if check_direct_access:
+            return False
+
+    def dotaccess(self, expr, left_type=None, check_direct_access=None, store_dst=None):
+        if check_direct_access or self._stmt_lookahead:
+            return False
+        if store_dst:
+            dst = self.cur_stack_dst(store_dst=store_dst)
+            prop = expr.children[1]
+            device = expr.children[0].children[0]
+            self._load_attr(dst=dst, device=device, prop=prop)
+            return dst
+        else:
+
+            prop = expr.children[1]
+            device = expr.children[0].children[0]
+
+            return Device(device, prop)
+
 
     def assignmentstmt(self, stmt):
         """"""
@@ -369,19 +401,31 @@ class Compiler:
             if not id:
                 dst = self.idtable[id]
 
-        with self.stack(expr):
-            self._stmt_lookahead = True
+        with self.stack(expr) as r1:
+
             self._stmt_lookahead_fail = False
+
+            if isinstance(dst, Device):
+                self._stmt_lookahead_ban = []
+            else:
+                self._stmt_lookahead_ban = [stmt.children[0].children[0].value]
             self._stmt_lookahead_copy = False
-            self._stmt_lookahead_ban = [stmt.children[0].children[0].value]
-            r0 = self.visit(expr)
-            self._stmt_lookahead = False
-            if self._stmt_lookahead_fail == True:
+
+            if not isinstance(dst, Device):
+                self._stmt_lookahead = True
                 r0 = self.visit(expr)
-        if self._stmt_lookahead_fail == False:
+                self._stmt_lookahead = False
+            else:
+                self._stmt_lookahead_fail = True
+
+            if self._stmt_lookahead_fail:
+                r0 = self.visit(expr, store_dst=r1)
+        if not self._stmt_lookahead_fail:
             r0 = self.visit(expr, store_dst=dst)
 
-        if self._stmt_lookahead_fail or self._stmt_lookahead_copy == False:
+        if isinstance(dst, Device):
+            self._save_attr(r0, dst.device, dst.prop)
+        elif self._stmt_lookahead_fail or self._stmt_lookahead_copy == False:
             self._push_copy_inst(src=r0, dst=dst)
 
     def var(self, var, **kwargs):
@@ -419,6 +463,27 @@ class Compiler:
             return True
         value = number.children[0].value
         return value
+
+    def _load_attr(self, dst, device: Token, prop: Token):
+        self._stmt_lookahead_copy = True
+        if self._stmt_lookahead:
+            return
+        if device in self.device_table:
+            device = self.device_table[device].device
+
+        prop_str= prop.value
+        self._add_instruction(f'l {dst} {device} {prop_str}', f'load {device} {prop_str} to {dst}')
+
+
+    def _save_attr(self, var, device: Token, prop: Token):
+        self._stmt_lookahead_copy = True
+        if self._stmt_lookahead:
+            return
+        if device in self.device_table:
+            device = self.device_table[device].device
+
+        prop_str = prop.value
+        self._add_instruction(f's {device} {prop} {var}', f'save {var} to {device} {prop}')
 
     def _load(self, dst, args):
         self._stmt_lookahead_copy = True
@@ -460,7 +525,8 @@ def compile_file(file: Path, debug=False):
     file_o = Path(f'{file}.mips')
     with file.open('r') as fd_r, file_o.open('w') as fd_w:
         a = fd_r.read()
-        compiler = Compiler()
+
+        compiler = Compiler(debug=debug)
         compiler.compile(a)
 
         output = ""
@@ -488,7 +554,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', dest='input',
                         help='folder or file for scripts')
     parser.add_argument('--debug', dest='debug', default=False,
-                        help='Output additional debug information for the code')
+                        help='Output additional debug information for the code', action='store_true')
     args = parser.parse_args()
     a = Path(args.input)
 

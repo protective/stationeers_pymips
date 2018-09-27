@@ -49,7 +49,9 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 !_comp_op: "<"|">"|"=="|">="|"<="|"<>"|"!="
 
 
-?atom_expr: atom_expr "(" [arguments] ")"
+?atom_expr: atom_expr "(" [arguments] ")"   -> call
+          | atom_expr "[" subscriptlist "]" -> attr_get
+          | atom_expr "." NAME              -> dotaccess
           | atom
 
 ?atom:  NAME -> var
@@ -59,7 +61,8 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
      | "True"    -> const_true
      | "False"   -> const_false
 
-
+subscriptlist: subscript ("," subscript)* [","]
+subscript: test
 arguments: argvalue ("," argvalue)*
 
 ?argvalue: test
@@ -67,7 +70,7 @@ arguments: argvalue ("," argvalue)*
 // not used in grammar, but may appear in "node" passed from Parser to Compiler
 encoding_decl: NAME
 
-yield_expr: "yield"
+yield_expr: "yield_tick"
 
 number: DEC_NUMBER | HEX_NUMBER | OCT_NUMBER | FLOAT_NUMBER | IMAG_NUMBER
 string: STRING | LONG_STRING
