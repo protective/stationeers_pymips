@@ -1,35 +1,15 @@
+import sys
+MIN_PYTHON = (3, 6)
+if sys.version_info < MIN_PYTHON:
+    print("Require python" +
+          str(MIN_PYTHON[0]) + "." + str(MIN_PYTHON[1]) +
+          " got " + str(sys.version_info.major) + "." + str(sys.version_info.minor))
+    sys.exit(1)
+
 import argparse
+
 from pathlib import Path
-
-from compiler.compiler import Compiler
-
-
-def compile_file(file: Path, debug=False):
-    file_o = Path(f'{file}.mips')
-    with file.open('r') as fd_r, file_o.open('w') as fd_w:
-        a = fd_r.read()
-
-        compiler = Compiler(debug=debug)
-        compiler.compile(a)
-
-        output = ""
-        if debug:
-            output = a.strip() + '\n'
-
-            output += "Begin Python**************************\n"
-            output += a.strip(a) + '\n'
-            output += "End Python*****************************\n"
-
-            output += "MIPS***********************************\n"
-            for i, (line, desc) in enumerate(compiler.final_program):
-               output += f'{line:35} {i:2}: {desc}\n'
-
-            output += "MIPS***********************************\n"
-        for i, (line, desc) in enumerate(compiler.final_program):
-            output += f'{line}\n'
-        print(output)
-        fd_w.write(output)
-
+from compiler.compiler import compile_file
 
 if __name__ == "__main__":
 

@@ -513,3 +513,28 @@ class Compiler:
         return Device(device, prop)
 
 
+def compile_file(file: Path, debug=False):
+    file_o = Path(f'{file}.mips')
+    with file.open('r') as fd_r, file_o.open('w') as fd_w:
+        a = fd_r.read()
+
+        compiler = Compiler(debug=debug)
+        compiler.compile(a)
+
+        output = ""
+        if debug:
+            output = a.strip() + '\n'
+
+            output += "Begin Python**************************\n"
+            output += a.strip(a) + '\n'
+            output += "End Python*****************************\n"
+
+            output += "MIPS***********************************\n"
+            for i, (line, desc) in enumerate(compiler.final_program):
+               output += f'{line:35} {i:2}: {desc}\n'
+
+            output += "MIPS***********************************\n"
+        for i, (line, desc) in enumerate(compiler.final_program):
+            output += f'{line}\n'
+        print(output)
+        fd_w.write(output)
