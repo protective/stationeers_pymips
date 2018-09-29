@@ -89,3 +89,13 @@ out = a
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 3
+
+
+def test_var_negative():
+    program = """
+a = -1
+out = a
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == -1

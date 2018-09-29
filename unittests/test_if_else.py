@@ -4,7 +4,6 @@ from unittests.mips_vm import MIPSVM
 def test_if_else_ternary_false():
     program = """
 out = 1 if 0 else 2
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -14,7 +13,6 @@ yield
 def test_if_else_ternary_true():
     program = """
 out = 1 if 1 else 2
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -24,7 +22,6 @@ yield
 def test_if_else_ternary_expr_l_true():
     program = """
 out = 10 + (1 if 1 else 2)
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -34,7 +31,6 @@ yield
 def test_if_else_ternary_expr_r_true():
     program = """
 out = (1 if 1 else 2) + 10
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -45,7 +41,6 @@ def test_if_false_eq():
     program = """
 if 1 == 0:
     out = 1
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -56,7 +51,6 @@ def test_if_true_eq():
     program = """
 if 1 == 1:
     out = 1
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -67,7 +61,6 @@ def test_if_false():
     program = """
 if 0:
     out = 1
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -78,11 +71,21 @@ def test_if_true():
     program = """
 if 1:
     out = 1
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
+
+
+def test_if_neg():
+    program = """
+if -1:
+    out = 1
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 1
+
 
 
 def test_if_else_false():
@@ -91,7 +94,6 @@ if 0:
     out = 1
 else:
     out = 2
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -104,7 +106,6 @@ if 1:
     out = 1
 else:
     out = 2
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -119,7 +120,6 @@ elif 0:
     out = 2
 else:
     out = 3
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -134,7 +134,6 @@ elif 1:
     out = 2
 else:
     out = 3
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -149,7 +148,6 @@ elif 1:
     out = 2
 else:
     out = 3
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -164,7 +162,6 @@ elif 0:
     out = 2
 else:
     out = 3
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -174,7 +171,6 @@ yield
 def test_if_else_ternary_false_expr():
     program = """
 out = 1 * 10 if 0 * 2 else 2 * 10
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -184,7 +180,6 @@ yield
 def test_if_else_ternary_true_expr():
     program = """
 out = 1 * 10 if 1 * 2 else 2 * 10
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -199,7 +194,6 @@ elif 0 * 2:
     out = 2 * 10
 else:
     out = 3 * 10
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -214,7 +208,6 @@ elif 1 * 2:
     out = 2 * 10
 else:
     out = 3 * 10
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -229,7 +222,6 @@ elif 0 * 2:
     out = 2 * 10
 else:
     out = 3 * 10
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -244,7 +236,6 @@ elif 0 * 2:
     out = 2 * 10 if 0 else 2 * 100
 else:
     out = 3 * 10 if 0 else 3 * 100
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -259,7 +250,6 @@ elif 0 * 2:
     out = 2 * 10 if 1 else 2 * 100
 else:
     out = 3 * 10 if 1 else 3 * 100
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -274,7 +264,6 @@ elif 1 * 2:
     out = 2 * 10 if 0 else 2 * 100
 else:
     out = 3 * 10 if 0 else 3 * 100
-yield
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -289,7 +278,6 @@ elif 1 * 2:
     out = 2 * 10 if 1 else 2 * 100
 else:
     out = 3 * 10 if 1 else 3 * 100
-yield
 """
     vm = MIPSVM(program)
     vm.execute()

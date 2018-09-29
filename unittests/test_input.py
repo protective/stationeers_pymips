@@ -1,11 +1,11 @@
 from unittests.mips_vm import MIPSVM
 
 
-def test_input():
+def test_input_1():
     program = """
 while True:
     out = load(d1, P1) + load(d1, P2) + load(d1, P3)
-    yield
+    yield_tick
 """
 
     vm = MIPSVM(program)
@@ -19,7 +19,6 @@ def test_input_if_and_true_true():
     program = """
 if load(d1, P1) and load(d1, P2):
     out = 1
-    yield
 """
 
     vm = MIPSVM(program)
@@ -31,7 +30,6 @@ def test_input_if_and_false_true():
     program = """
 if load(d1, P1) and load(d1, P2):
     out = 1
-    yield
 """
 
     vm = MIPSVM(program)
@@ -43,7 +41,6 @@ def test_input_if_and_true_false():
     program = """
 if load(d1, P1) and load(d1, P2):
     out = 1
-    yield
 """
 
     vm = MIPSVM(program)
@@ -55,7 +52,6 @@ def test_input_if_and_false_false():
     program = """
 if load(d1, P1) and load(d1, P2):
     out = 1
-    yield
 """
 
     vm = MIPSVM(program)
@@ -67,8 +63,8 @@ def test_input_while():
     program = """
 while load(d1, P1) and load(d1, P2):
     out = 1
-    yield
-yield
+    yield_tick
+yield_tick
 """
 
     vm = MIPSVM(program)

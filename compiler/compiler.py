@@ -123,7 +123,7 @@ class Compiler:
             label = f'L{self.label}'
         self.labels[label] = None
         label_str = '{' + str(label) + '}'
-        self._add_instruction(f'bgtz {condition} {label_str}', f'Jump to {label_str} if {condition}')
+        self._add_instruction(f'bne {condition} 0 {label_str}', f'Jump to {label_str} if {condition}')
         return label
 
     def _push_conditional_eq_jump_inst(self, r0, r1, label, eq=True):
@@ -376,7 +376,6 @@ class Compiler:
 
             return Device(device, prop)
 
-
     def assignmentstmt(self, stmt):
         """"""
         self._stmt_lookahead = True
@@ -450,6 +449,13 @@ class Compiler:
             return True
         return loc.children[0].value
 
+    def factor(self, number, check_direct_access=None, store_dst=None):
+        if check_direct_access:
+            return True
+        if number.children[0].value == '-':
+            return f'-{self.visit(number.children[1])}'
+        raise Exception(f'Unknown factor "{number.children[0].value}"')
+
     def number(self, number, check_direct_access=None, store_dst=None):
         if check_direct_access:
             return True
@@ -465,7 +471,6 @@ class Compiler:
 
         prop_str= prop.value
         self._add_instruction(f'l {dst} {device} {prop_str}', f'load {device} {prop_str} to {dst}')
-
 
     def _save_attr(self, var, device: Token, prop: Token):
         self._stmt_lookahead_copy = True

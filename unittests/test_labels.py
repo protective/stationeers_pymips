@@ -12,7 +12,7 @@ while True:
         save(1, exit_pump, On)
     elif room_tmp < 24:
         save(0, exit_pump, On)
-    yield
+    yield_tick
 """
 
     vm = MIPSVM(program)

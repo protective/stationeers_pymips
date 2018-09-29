@@ -107,6 +107,16 @@ class MIPSVM:
             self._set_variable(args[1], str(float(self._get_variable(args[2])) % float(self._get_variable(args[3]))))
         elif inst == 'slt':
             self._set_variable(args[1], str(1 if float(self._get_variable(args[2])) < float(self._get_variable(args[3])) else 0))
+        elif inst == 'sgt':
+            self._set_variable(args[1], str(1 if float(self._get_variable(args[2])) > float(self._get_variable(args[3])) else 0))
+        elif inst == 'sle':
+            self._set_variable(args[1], str(1 if float(self._get_variable(args[2])) <= float(self._get_variable(args[3])) else 0))
+        elif inst == 'sge':
+            self._set_variable(args[1], str(1 if float(self._get_variable(args[2])) >= float(self._get_variable(args[3])) else 0))
+        elif inst == 'seq':
+            self._set_variable(args[1], str(1 if float(self._get_variable(args[2])) == float(self._get_variable(args[3])) else 0))
+        elif inst == 'sne':
+            self._set_variable(args[1], str(1 if float(self._get_variable(args[2])) != float(self._get_variable(args[3])) else 0))
         elif inst == 'bgtz':
             if float(self._get_variable(args[1])) > 0:
                 self._pc = int(args[2])

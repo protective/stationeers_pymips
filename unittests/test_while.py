@@ -5,7 +5,7 @@ def test_while_true():
     program = """
 while True:
     out = out + 1 
-    yield
+    yield_tick
 out = 0
 """
     vm = MIPSVM(program)
@@ -18,10 +18,10 @@ def test_while_false():
     program = """
 while False:
     out = out + 1 
-    yield
+    yield_tick
 out = 1
-yield
-yield
+yield_tick
+yield_tick
 """
     vm = MIPSVM(program)
     vm.execute()
@@ -33,7 +33,7 @@ def test_while_true():
     program = """
 while out < 10:
     out = out + 1
-yield
+yield_tick
 """
     vm = MIPSVM(program)
     vm.execute()

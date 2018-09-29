@@ -9,7 +9,7 @@ while True:
         out = 1
     elif a < 5:
         out = 0
-    yield
+    yield_tick
 """
     vm = MIPSVM(program)
     vm.execute({('d1', 'P1'): 0})
