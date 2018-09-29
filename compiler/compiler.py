@@ -5,6 +5,7 @@ from pathlib import Path
 
 try:
     from lark import Lark, Tree
+    from lark import exceptions as lark_exceptions
     from lark.lexer import Token
     from lark.indenter import Indenter
 
@@ -50,8 +51,11 @@ class Compiler:
 
     def compile(self, program):
         parser = Lark(grammar, start='root', parser='lalr', postlex=TreeIndenter())
-
-        tree = parser.parse(program)
+        try:
+            tree = parser.parse(program)
+        except lark_exceptions.UnexpectedToken as exc:
+            print(exc)
+            return str(exc)
         if self.debug:
             print(tree)
         self.visit(tree)
