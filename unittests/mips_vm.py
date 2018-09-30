@@ -95,6 +95,8 @@ class MIPSVM:
             self._set_variable(args[1], str(float(self._get_variable(args[2])) and float(self._get_variable(args[3]))))
         elif inst == 'or':
             self._set_variable(args[1], str(float(self._get_variable(args[2])) or float(self._get_variable(args[3]))))
+        elif inst == 'xor':
+            self._set_variable(args[1], str(int(bool(float(self._get_variable(args[2]))) != bool(float(self._get_variable(args[3]))))))
         elif inst == 'add':
             self._set_variable(args[1], str(float(self._get_variable(args[2])) + float(self._get_variable(args[3]))))
         elif inst == 'sub':

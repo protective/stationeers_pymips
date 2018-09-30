@@ -179,3 +179,40 @@ if 0 or 1 and 0:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 0
+
+
+def test_condition_assignment_and_true():
+    program = """
+out = 1 and 1
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 1
+
+
+def test_condition_assignment_and_false():
+    program = """
+out = 1 and 0
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 0
+
+
+def test_condition_assignment_ternary_true():
+    program = """
+out = 1 if 1 and 1 else 0
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 1
+
+
+def test_condition_assignment_ternary_false():
+    program = """
+out = 1 if 1 and 0 else 0
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 0
+

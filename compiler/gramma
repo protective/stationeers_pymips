@@ -25,7 +25,7 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 ?test: or_test ["if" or_test "else" test]
 ?or_test: and_test ("or" and_test)*
 ?and_test: not_test ("and" not_test)*
-?not_test: "not" not_test -> not
+?not_test: "not" not_test -> not_test
          | comparison
 ?comparison: expr (_comp_op expr)*
 

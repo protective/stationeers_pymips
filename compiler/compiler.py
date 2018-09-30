@@ -183,7 +183,7 @@ class Compiler:
             ret = self.operator(lst[0], 'and', lst[1], store_dst=store_dst)
             lst = lst[2:]
             lst.insert(0, Tree('loc', [Token('loc', retloc)]))
-        return retloc
+        return ret
 
     def or_test(self, stmt, check_direct_access=None, store_dst=None):
         if check_direct_access:
@@ -194,7 +194,31 @@ class Compiler:
             ret = self.operator(lst[0], 'or', lst[1], store_dst=store_dst)
             lst = lst[2:]
             lst.insert(0, Tree('loc', [Token('loc', retloc)]))
-        return retloc
+        return ret
+
+    def not_test(self, stmt, check_direct_access=None, store_dst=None):
+        if check_direct_access:
+            return False
+        lst = stmt.children.copy()
+        retloc = self.cur_stack
+        while len(lst) >= 1:
+            ret = self.unary_operator('not', lst[0], store_dst=store_dst)
+            lst = lst[1:]
+        return ret
+
+    def unary_operator(self, op, right, store_dst=None):
+        if self._stmt_lookahead:
+            r1 = self.visit(right)
+            self._stmt_lookahead_copy = True
+            return
+        with self.stack(right, store_dst=store_dst) as s0:
+            r0 = self.visit(right, store_dst=s0)
+
+        dst = self.cur_stack_dst(store_dst)
+        if op == 'not':
+            self._add_instruction(f'xor {dst} {r0} 1', f'not {r0} -> {dst}')
+
+        return dst
 
     def test(self, stmt, check_direct_access=None, store_dst=None):
         if check_direct_access:
