@@ -387,8 +387,21 @@ class Compiler:
         return dst
 
     def attr_get(self, expr, left_type=None, check_direct_access=None, store_dst=None):
-        if check_direct_access:
+        if check_direct_access or self._stmt_lookahead:
             return False
+        if store_dst:
+
+            index_expr = expr.children[1]
+            dotacces_expr = expr.children[0]
+            with self.stack() as r0:
+                r0 = self.visit(index_expr, store_dst=r0)
+            dst = self.cur_stack_dst(store_dst=store_dst)
+            prop = dotacces_expr.children[1]
+            device = dotacces_expr.children[0].children[0]
+            self._load_attr_slot(dst=dst, device=device, prop=prop, slot=r0)
+            return dst
+        else:
+            raise Exception("Slot access read only")
 
     def dotaccess(self, expr, left_type=None, check_direct_access=None, store_dst=None):
         if check_direct_access or self._stmt_lookahead:
@@ -492,6 +505,13 @@ class Compiler:
         value = number.children[0].value
         return value
 
+    def subscriptlist(self, expr, left_type=None, check_direct_access=None, store_dst=None):
+        return self.visit(expr.children[0], check_direct_access=check_direct_access, store_dst=store_dst)
+
+    def subscript(self, expr, left_type=None, check_direct_access=None, store_dst=None):
+
+        return self.visit(expr.children[0], check_direct_access=check_direct_access, store_dst=store_dst)
+
     def _load_attr(self, dst, device: Token, prop: Token):
         self._stmt_lookahead_copy = True
         if self._stmt_lookahead:
@@ -501,6 +521,17 @@ class Compiler:
 
         prop_str= prop.value
         self._add_instruction(f'l {dst} {device} {prop_str}', f'load {device} {prop_str} to {dst}')
+
+    def _load_attr_slot(self, dst, device: Token, prop: Token, slot):
+        self._stmt_lookahead_copy = True
+        if self._stmt_lookahead:
+            return
+        if device in self.device_table:
+            device = self.device_table[device].device
+
+        prop_str= prop.value
+        self._add_instruction(f'ls {dst} {device} {slot} {prop_str}', f'load {device} {prop_str}[{slot}] to {dst}')
+
 
     def _save_attr(self, var, device: Token, prop: Token):
         self._stmt_lookahead_copy = True

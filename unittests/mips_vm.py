@@ -17,6 +17,9 @@ class MIPSVM:
             mips = Compiler().compile(program)
             self.parse(mips)
             print()
+            print("================================================")
+            print(program)
+            print("------------------------------------------------")
             print(mips)
             print()
             pass
@@ -87,6 +90,8 @@ class MIPSVM:
             self._pc = int(args[1])
         elif inst == 'l':
             self._set_variable(args[1], self._get_variable((args[2], args[3])))
+        elif inst == 'ls':
+            self._set_variable(args[1], self._get_variable((args[2], args[4], int(float(self._get_variable(args[3]))))))
         elif inst == 's':
             self._set_variable((args[1], args[2]), self._get_variable(args[3]))
         elif inst == 'move':
