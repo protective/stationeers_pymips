@@ -1,3 +1,4 @@
+import os
 from contextlib import contextmanager
 
 import sys
@@ -52,8 +53,9 @@ class Compiler:
     def compile(self, program):
         parser = Lark(grammar, start='root', parser='lalr', postlex=TreeIndenter())
         try:
-            tree = parser.parse(program)
+            tree = parser.parse(program + os.linesep)
         except lark_exceptions.UnexpectedToken as exc:
+            # TODO redo error handling
             print(exc)
             return str(exc)
         if self.debug:
