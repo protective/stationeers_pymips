@@ -7,7 +7,7 @@ root: (_NEWLINE | stmt)*
 ?expr_stmt: test -> stmt
          | test "=" test -> assignmentstmt
 
-!augassign: ("+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "**=" | "//=")
+!augassign: ("+=" | "-=" | "*=" | "/=")
 // For normal and annotated assignments, additional restrictions enforced by the interpreter
 pass_stmt: "pass"
 ?flow_stmt: break_stmt | continue_stmt | yield_stmt

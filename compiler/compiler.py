@@ -562,17 +562,26 @@ def compile_src(src: str, debug=False):
 
     output = ""
     if debug:
-        output = src.strip() + '\n'
 
         output += "Begin Python**************************\n"
-        output += src.strip(src) + '\n'
+        output = src.strip() + '\n'
         output += "End Python*****************************\n"
+
+        output += "IDTable******************************\n"
+        output += "\n".join([f'{key} ==> {value}' for key, value in compiler.idtable.items()])
+        output += "\n"
+        output += "JumpTable******************************\n"
+        output += "\n".join([f'{key} ==> {value}' for key, value in compiler.labels.items()])
+        output += "\n"
+        for i, (line, desc) in enumerate(compiler.program):
+            output += f'{line:35} {i:2}: {desc}\n'
 
         output += "MIPS***********************************\n"
         for i, (line, desc) in enumerate(compiler.final_program):
             output += f'{line:35} {i:2}: {desc}\n'
 
+    else:
         output += "MIPS***********************************\n"
-    for i, (line, desc) in enumerate(compiler.final_program):
-        output += f'{line}\n'
+        for i, (line, desc) in enumerate(compiler.final_program):
+            output += f'{line}\n'
     return output
