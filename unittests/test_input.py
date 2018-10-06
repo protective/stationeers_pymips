@@ -3,8 +3,9 @@ from unittests.mips_vm import MIPSVM
 
 def test_input_1():
     program = """
+d1 = label(d1, 'd1')
 while True:
-    out = load(d1, P1) + load(d1, P2) + load(d1, P3)
+    out = d1.P1 + d1.P2 + d1.P3
     yield_tick
 """
 
@@ -17,7 +18,8 @@ while True:
 
 def test_input_if_and_true_true():
     program = """
-if load(d1, P1) and load(d1, P2):
+d1 = label(d1, 'd1')
+if d1.P1 and d1.P2:
     out = 1
 """
 
@@ -28,7 +30,8 @@ if load(d1, P1) and load(d1, P2):
 
 def test_input_if_and_false_true():
     program = """
-if load(d1, P1) and load(d1, P2):
+d1 = label(d1, 'd1')
+if d1.P1 and d1.P2:
     out = 1
 """
 
@@ -39,7 +42,8 @@ if load(d1, P1) and load(d1, P2):
 
 def test_input_if_and_true_false():
     program = """
-if load(d1, P1) and load(d1, P2):
+d1 = label(d1, 'd1')
+if d1.P1 and d1.P2:
     out = 1
 """
 
@@ -50,7 +54,8 @@ if load(d1, P1) and load(d1, P2):
 
 def test_input_if_and_false_false():
     program = """
-if load(d1, P1) and load(d1, P2):
+d1 = label(d1, 'd1')
+if d1.P1 and d1.P2:
     out = 1
 """
 
@@ -61,7 +66,8 @@ if load(d1, P1) and load(d1, P2):
 
 def test_input_while():
     program = """
-while load(d1, P1) and load(d1, P2):
+d1 = label(d1, 'd1')
+while d1.P1 and d1.P2:
     out = 1
     yield_tick
 yield_tick

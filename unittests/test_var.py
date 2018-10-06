@@ -83,6 +83,30 @@ def test_var_access_scope_3():
     program = """
 a = 1
 b = 2
+a = b + a + a
+out = a
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 4
+
+
+def test_var_access_scope_4():
+    program = """
+a = 1
+b = 2
+a = b + (a + a)
+out = a
+"""
+    vm = MIPSVM(program)
+    vm.execute()
+    assert vm.get_variable('o') == 4
+
+
+def test_var_access_scope_5():
+    program = """
+a = 1
+b = 2
 a = b + a
 out = a
 """

@@ -1,6 +1,52 @@
 from unittests.mips_vm import MIPSVM
 
 
+def test_condition_or_scope_false_true():
+    program = """
+p = label(d0, "Sensor")
+if p.false or p.true:
+    out = 1
+"""
+    vm = MIPSVM(program)
+    vm.execute({('d0', 'true'): 1, ('d0', 'false'): 0})
+    assert vm.get_variable('o') == 1
+
+
+def test_condition_or_scope_true_false():
+    program = """
+p = label(d0, "Sensor")
+if p.true or p.false:
+    out = 1
+"""
+    vm = MIPSVM(program)
+    vm.execute({('d0', 'true'): 1, ('d0', 'false'): 0})
+    assert vm.get_variable('o') == 1
+
+
+def test_condition_and_scope_false_true():
+    program = """
+p = label(d0, "Sensor")
+if p.false and p.true:
+    out = 1
+"""
+    vm = MIPSVM(program)
+    vm.execute({('d0', 'true'): 1, ('d0', 'false'): 0})
+    assert vm.get_variable('o') == 0
+
+
+def test_condition_and_scope_true_false():
+    program = """
+p = label(d0, "Sensor")
+if p.true and p.false:
+    out = 1
+"""
+    vm = MIPSVM(program)
+    vm.execute({('d0', 'true'): 1, ('d0', 'false'): 0})
+    assert vm.get_variable('o') == 0
+
+
+
+
 def test_condition_or_false_true():
     program = """
 if 0 or 1:

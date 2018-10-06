@@ -3,8 +3,9 @@ from unittests.mips_vm import MIPSVM
 
 def test_yield_1():
     program = """
+d1 = label(d1, 'd1')
 while True:
-    a = load(d1, P1)
+    a = d1.P1
     if a > 10:
         out = 1
     elif a < 5:

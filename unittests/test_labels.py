@@ -7,11 +7,11 @@ exit_pump = label(d1, "VolumePump")
 pipe_sensor = label(d2, "PipeAnalyzer")
 
 while True:
-    room_tmp = load(room_sensor, Temperature)
-    if room_tmp > 25 or load(pipe_sensor, Pressure) > 4000:
-        save(1, exit_pump, On)
+    room_tmp = room_sensor.Temperature
+    if room_tmp > 25 or pipe_sensor.Pressure > 4000:
+        exit_pump.On = 1
     elif room_tmp < 24:
-        save(0, exit_pump, On)
+        exit_pump.On = 0
     yield_tick
 """
 
