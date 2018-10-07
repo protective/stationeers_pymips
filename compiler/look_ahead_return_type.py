@@ -1,7 +1,7 @@
 from lark import Tree
 from lark.lexer import Token
 
-from compiler.exceptions import MipsUndeclaredVariable
+from compiler.exceptions import MipsUnboundLocalError
 from compiler.expr_look_ahead import ExprLookAhead
 from compiler.types import Device, Variable, VarType
 
@@ -21,7 +21,7 @@ class LAReturnType(ExprLookAhead):
             #    ret = self.vtable[tree.children[0].value][1]
             return self.compiler.vtable[id].var_type
         else:
-            raise MipsUndeclaredVariable(str(id))
+            raise MipsUnboundLocalError(str(id))
 
     def reduce_expr(self, tree):
         lst = tree.children.copy()
@@ -47,7 +47,7 @@ class LAReturnType(ExprLookAhead):
     def attr_get(self, expr):
         self.visit(expr.children[1])
 
-    def dotaccess(self, expr):
+    def dot_access(self, expr):
         pass
 
     def and_test(self, stmt):

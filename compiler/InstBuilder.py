@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 from compiler.Visitor import Visitor
-from compiler.exceptions import MipsCodeError
+from compiler.exceptions import MipsCodeError, MipsUnboundLocalError, MipsAttributeError, MipsNameError
 from compiler.look_ahead_can_assign import LACanAssign
 from compiler.look_ahead_expr_rearrange import LAExprRearrange
 from compiler.look_ahead_return_type import LAReturnType
@@ -111,15 +111,17 @@ class InstBuilder(Visitor):
         for stmt in stmts.children:
             self.visit(stmt)
 
-    def var(self, var, **kwargs):
+    def var(self, var, assignment=False, store_dst=None):
         name: str = var.children[0].value
 
         if name in self.idtable:
             return f'{self.idtable[name]}'
-        else:
+        elif assignment:
             self.idtable[name] = self.cur_register
             self._free_register_counter += 1
             return self.idtable[name]
+        else:
+            raise MipsUnboundLocalError(name)
 
     def const_true(self, token, store_dst=None):
         return '1'
@@ -194,12 +196,12 @@ class InstBuilder(Visitor):
         expr_return_type = LAReturnType(self, expr).return_type
 
         if expr_return_type == Device:
-            r0 = self.visit(expr)
+            r0 = self.visit(expr, assignment=True)
             self.device_table[stmt.children[0].children[0].value] = r0
             return
         else:
             # Get the destination by visit the id.
-            dst = self.visit(id)
+            dst = self.visit(id, assignment=True)
 
         expr_can_assign = LACanAssign(expr).result
         store_dst = dst if dst in self.idtable.values() else None
@@ -366,7 +368,7 @@ class InstBuilder(Visitor):
         dst = self.cur_stack_dst(store_dst=store_dst)
         return dst
 
-    def call(self, expr, store_dst=None):
+    def call(self, expr, store_dst=None, **kwargs):
         with self.free_register(store_dst=store_dst) as dst:
             ret = None
             if isinstance(expr.children[0], Tree):
@@ -385,22 +387,26 @@ class InstBuilder(Visitor):
         if store_dst:
 
             index_expr = expr.children[1]
-            dotacces_expr = expr.children[0]
+            dot_access_expr = expr.children[0]
             with self.free_register() as r0:
                 r0 = self.visit(index_expr, store_dst=r0)
             dst = self.cur_stack_dst(store_dst=store_dst)
-            prop = dotacces_expr.children[1]
-            device = dotacces_expr.children[0].children[0]
+            prop = dot_access_expr.children[1]
+            device = dot_access_expr.children[0].children[0]
             self._load_attr_slot(dst=dst, device=device, prop=prop, slot=r0)
             return dst
         else:
             raise Exception("Slot access read only")
 
-    def dotaccess(self, expr, store_dst=None):
+    def dot_access(self, expr, store_dst=None, **kwargs):
         if store_dst:
             dst = self.cur_stack_dst(store_dst=store_dst)
             prop = expr.children[1]
             device = expr.children[0].children[0]
+            if device not in self.device_table:
+                if device in self.idtable:
+                    raise MipsAttributeError(device, prop)
+                raise MipsUnboundLocalError(device)
             self._load_attr(dst=dst, device=device, prop=prop)
             return dst
         else:
@@ -411,22 +417,25 @@ class InstBuilder(Visitor):
             return Device(device, prop)
 
     def _load_attr(self, dst, device: Token, prop: Token):
+        prop_str = prop.value
         if device in self.device_table:
             device = self.device_table[device].device
-
-        prop_str= prop.value
+        else:
+            raise MipsAttributeError(device, prop_str)
         self._add_instruction(f'l {dst} {device} {prop_str}', f'load {device} {prop_str} to {dst}')
 
     def _load_attr_slot(self, dst, device: Token, prop: Token, slot):
+        prop_str = prop.value
         if device in self.device_table:
             device = self.device_table[device].device
-
-        prop_str= prop.value
+        else:
+            raise MipsAttributeError(device, prop_str)
         self._add_instruction(f'ls {dst} {device} {slot} {prop_str}', f'load {device} {prop_str}[{slot}] to {dst}')
 
     def _save_attr(self, var, device: Token, prop: Token):
         if device in self.device_table:
             device = self.device_table[device].device
-
+        else:
+            raise MipsNameError(device)
         prop_str = prop.value
         self._add_instruction(f's {device} {prop} {var}', f'save {var} to {device} {prop}')

@@ -8,7 +8,7 @@ class LACanAssign(ExprLookAhead):
         ret = self.visit(node)
         self.result = False if ret is None else True
 
-    def dotaccess(self, expr):
+    def dot_access(self, expr):
         return True
 
     def loc(self, loc):

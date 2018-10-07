@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from compiler.InstBuilder import InstBuilder
+from compiler.exceptions import MipsSyntaxError, MipsException
 
 try:
     from lark import Lark, Tree
@@ -39,10 +40,9 @@ class Compiler:
         parser = Lark(grammar, start='root', parser='lalr', postlex=TreeIndenter())
         try:
             tree = parser.parse(program + os.linesep)
-        except lark_exceptions.UnexpectedToken as exc:
-            # TODO redo error handling
-            print(exc)
-            return str(exc)
+        except (lark_exceptions.UnexpectedToken, lark_exceptions.UnexpectedCharacters) as exc:
+            raise MipsSyntaxError(exc)
+
         if self.debug:
             print(tree)
         builder = InstBuilder()
@@ -75,30 +75,33 @@ def compile_file(file: Path, debug=False):
 
 
 def compile_src(src: str, debug=False):
-    compiler = Compiler(debug=debug)
-    compiler.compile(src)
+    try:
+        compiler = Compiler(debug=debug)
+        compiler.compile(src)
 
-    output = ""
-    if debug:
+        output = ""
+        if debug:
 
-        output += "Begin Python**************************\n"
-        output = src.strip() + '\n'
-        output += "End Python*****************************\n"
+            output += "Begin Python**************************\n"
+            output = src.strip() + '\n'
+            output += "End Python*****************************\n"
 
-        output += "IDTable******************************\n"
-        output += "\n".join([f'{key} ==> {value}' for key, value in compiler.idtable.items()])
-        output += "\n"
-        output += "JumpTable******************************\n"
-        output += "\n".join([f'{key} ==> {value}' for key, value in compiler.labels.items()])
-        output += "\n"
-        for i, (line, desc) in enumerate(compiler.program):
-            output += f'{line:35} {i:2}: {desc}\n'
+            output += "IDTable******************************\n"
+            output += "\n".join([f'{key} ==> {value}' for key, value in compiler.idtable.items()])
+            output += "\n"
+            output += "JumpTable******************************\n"
+            output += "\n".join([f'{key} ==> {value}' for key, value in compiler.labels.items()])
+            output += "\n"
+            for i, (line, desc) in enumerate(compiler.program):
+                output += f'{line:35} {i:2}: {desc}\n'
 
-        output += "MIPS***********************************\n"
-        for i, (line, desc) in enumerate(compiler.final_program):
-            output += f'{line:35} {i:2}: {desc}\n'
+            output += "MIPS***********************************\n"
+            for i, (line, desc) in enumerate(compiler.final_program):
+                output += f'{line:35} {i:2}: {desc}\n'
 
-    else:
-        for i, (line, desc) in enumerate(compiler.final_program):
-            output += f'{line}\n'
+        else:
+            for i, (line, desc) in enumerate(compiler.final_program):
+                output += f'{line}\n'
+    except MipsException as exc:
+        return str(exc)
     return output.strip()

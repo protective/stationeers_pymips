@@ -49,7 +49,7 @@ suite: simple_stmt | _NEWLINE _INDENT stmt+ _DEDENT
 
 ?atom_expr: atom_expr "(" [arguments] ")"   -> call
           | atom_expr "[" subscriptlist "]" -> attr_get
-          | atom_expr "." NAME              -> dotaccess
+          | atom_expr "." NAME              -> dot_access
           | atom
 
 ?atom:  NAME -> var

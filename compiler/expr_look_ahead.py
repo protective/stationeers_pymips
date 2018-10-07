@@ -32,7 +32,7 @@ class ExprLookAhead(Visitor):
     def attr_get(self, expr):
         self.visit(expr.children[1])
 
-    def dotaccess(self, expr):
+    def dot_access(self, expr):
         pass
 
     def and_test(self, stmt):
