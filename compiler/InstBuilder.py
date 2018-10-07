@@ -16,7 +16,7 @@ class InstBuilder(Visitor):
     def __init__(self):
         self._free_register_counter = 0
         self.idtable = {'out': 'o'}
-        self.device_table = {}
+        self.device_table = {'db': Device('db', 'Socket')}
         self.vtable = {'label': Function(self._label, Device), 'device': Function(self._label, Device)}
         self.labels = {}
         self.label = 0
