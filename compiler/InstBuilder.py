@@ -4,6 +4,7 @@ from compiler.Visitor import Visitor
 from compiler.exceptions import MipsCodeError, MipsUnboundLocalError, MipsAttributeError, MipsNameError, \
     MipsAttributeCantSetError
 from compiler.look_ahead_can_assign import LACanAssign
+from compiler.look_ahead_can_branch import LACanBranch
 from compiler.look_ahead_expr_rearrange import LAExprRearrange
 from compiler.look_ahead_return_type import LAReturnType
 from compiler.types import Device, Function, Variable
@@ -112,7 +113,7 @@ class InstBuilder(Visitor):
         for stmt in stmts.children:
             self.visit(stmt)
 
-    def var(self, var, assignment=False, store_dst=None):
+    def var(self, var, assignment=False, **kwargs):
         name: str = var.children[0].value
 
         if name in self.idtable:
@@ -126,21 +127,21 @@ class InstBuilder(Visitor):
         else:
             raise MipsUnboundLocalError(name)
 
-    def const_true(self, token, store_dst=None):
+    def const_true(self, _, **kwargs):
         return '1'
 
-    def const_false(self, token, store_dst=None):
+    def const_false(self, _, **kwargs):
         return '0'
 
-    def loc(self, loc, store_dst=None):
+    def loc(self, loc, **kwargs):
         return loc.children[0].value
 
-    def factor(self, number, store_dst=None):
+    def factor(self, number, **kwargs):
         if number.children[0].value == '-':
             return f'-{self.visit(number.children[1])}'
         raise Exception(f'Unknown factor "{number.children[0].value}"')
 
-    def number(self, number, store_dst=None):
+    def number(self, number, **kwargs):
         value = number.children[0].value
         return value
 
@@ -159,7 +160,7 @@ class InstBuilder(Visitor):
         self._recursive_if_stmt(stmt.children.copy(), exit_jump)
         self._insert_label(exit_jump)
 
-    def and_test(self, stmt, store_dst=None):
+    def and_test(self, stmt, store_dst=None, **kwargs):
         lst = stmt.children.copy()
         with self.free_register(store_dst=store_dst) as t0:
             while len(lst) >= 2:
@@ -168,7 +169,7 @@ class InstBuilder(Visitor):
                 lst.insert(0, Tree('loc', [Token('loc', t0)]))
             return t0
 
-    def or_test(self, stmt, store_dst=None):
+    def or_test(self, stmt, store_dst=None, **kwargs):
         lst = stmt.children.copy()
         with self.free_register(store_dst=store_dst) as t0:
             while len(lst) >= 2:
@@ -177,7 +178,7 @@ class InstBuilder(Visitor):
                 lst.insert(0, Tree('loc', [Token('loc', t0)]))
             return t0
 
-    def not_test(self, stmt, store_dst=None):
+    def not_test(self, stmt, store_dst=None, **kwargs):
         lst = stmt.children.copy()
         with self.free_register(store_dst=store_dst) as t0:
             while len(lst) >= 1:
@@ -185,7 +186,7 @@ class InstBuilder(Visitor):
                 lst = lst[1:]
             return t0
 
-    def test(self, stmt, store_dst=None):
+    def test(self, stmt, store_dst=None, **kwargs):
         lst = stmt.children.copy()
 
         n_lst = [lst[1], lst[0], lst[2]]
@@ -222,9 +223,12 @@ class InstBuilder(Visitor):
             test = stmt_lst[0]
             if_suite = stmt_lst[1]
 
+            can_branch = LACanBranch(test).result
             with self.free_register(can_direct_access=LACanAssign(test).result) as t0:
-                t0 = self.visit(test, store_dst=t0)
-            con_jump_label = self._push_conditional_jump_inst(t0, None)
+                con_jump_label = self._create_label() if can_branch else None
+                t0 = self.visit(test, store_dst=t0, branch_dst=con_jump_label)
+            if not can_branch:
+                con_jump_label = self._push_conditional_jump_inst(t0, None)
             # Else stmt
             self._recursive_if_stmt(stmt_lst[2:], exit_jump, is_expr=is_expr, store_dst=store_dst)
 
@@ -283,7 +287,7 @@ class InstBuilder(Visitor):
     def yield_stmt(self, stmt):
         self._add_instruction('yield', 'yield')
 
-    def reduce_expr(self, tree, store_dst=None):
+    def reduce_expr(self, tree, store_dst=None, **kwargs):
         lst = tree.children.copy()
         expr_eval_dst = store_dst
 
@@ -295,7 +299,7 @@ class InstBuilder(Visitor):
             eval_store = t0
             while len(lst) >= 3:
                 eval_store = t0 if len(lst) >= 5 else store_dst  # use store_dst if final eval
-                eval_store = self.operator(*lst[0:3], store_dst=eval_store)
+                eval_store = self.operator(*lst[0:3], store_dst=eval_store, **kwargs)
                 lst = lst[3:]
                 lst.insert(0, Tree('loc', [Token('loc', t0)]))
             return eval_store
@@ -310,7 +314,7 @@ class InstBuilder(Visitor):
 
         return dst
 
-    def operator(self, left, op: Token, right, store_dst=None):
+    def operator(self, left, op: Token, right, store_dst=None, branch_dst=None):
 
         with self.free_register(LACanAssign(left).result, store_dst=store_dst) as s0:
             r0 = self.visit(left, store_dst=s0)
@@ -338,6 +342,8 @@ class InstBuilder(Visitor):
         if opper:
             self._add_instruction(f'{opper} {dst} {r0} {r1}', f'{r0} {opper} {r1} -> {dst}')
         else:
+            if branch_dst:
+                branch_str = '{' + str(branch_dst) + '}'
             if op.value == '<':
                 self._add_instruction(f'slt {dst} {r0} {r1}', f'{r0} < {r1} -> {dst}')
             elif op.value == '>':
@@ -347,9 +353,15 @@ class InstBuilder(Visitor):
             elif op.value == '>=':
                 self._add_instruction(f'sge {dst} {r0} {r1}', f'{r0} <= {r1} -> {dst}')
             elif op.value == '==':
-                self._add_instruction(f'seq {dst} {r0} {r1}', f'{r0} == {r1} -> {dst}')
+                if branch_dst:
+                    self._add_instruction(f'beq {r0} {r1} {branch_str} ', f'Jump to {branch_str} iff {r0} == {r1}')
+                else:
+                    self._add_instruction(f'seq {dst} {r0} {r1}', f'{r0} == {r1} -> {dst}')
             elif op.value == '!=':
-                self._add_instruction(f'sne {dst} {r0} {r1}', f'{r0} != {r1} -> {dst}')
+                if branch_dst:
+                    self._add_instruction(f'bne {r0} {r1} {branch_str} ', f'Jump to {branch_str} iff {r0} != {r1}')
+                else:
+                    self._add_instruction(f'sne {dst} {r0} {r1}', f'{r0} != {r1} -> {dst}')
         return dst
 
     def subscriptlist(self, expr, store_dst=None):
@@ -358,16 +370,16 @@ class InstBuilder(Visitor):
     def subscript(self, expr, store_dst=None):
         return self.visit(expr.children[0],  store_dst=store_dst)
 
-    def term(self, expr, store_dst=None):
+    def term(self, expr, store_dst=None, **kwargs):
         return self.reduce_expr(expr, store_dst=store_dst)
 
-    def arith_expr(self, expr, store_dst=None):
+    def arith_expr(self, expr, store_dst=None, **kwargs):
         return self.reduce_expr(expr, store_dst=store_dst)
 
-    def comparison(self, expr, store_dst=None):
-        return self.reduce_expr(expr, store_dst=store_dst)
+    def comparison(self, expr, store_dst=None, **kwargs):
+        return self.reduce_expr(expr, store_dst=store_dst, **kwargs)
 
-    def atom_expr(self, expr, store_dst=None):
+    def atom_expr(self, expr, store_dst=None, **kwargs):
         dst = self.cur_stack_dst(store_dst=store_dst)
         return dst
 
@@ -386,7 +398,7 @@ class InstBuilder(Visitor):
                 return ret
             return dst
 
-    def attr_get(self, expr, store_dst=None):
+    def attr_get(self, expr, store_dst=None, **kwargs):
         if store_dst:
 
             index_expr = expr.children[1]
