@@ -48,7 +48,13 @@ class LAReturnType(ExprLookAhead):
         self.visit(expr.children[1])
 
     def dot_access(self, expr):
-        pass
+        ret = self.visit(expr.children[0])
+        if isinstance(ret, Device):
+            if ret.property_access == ['Reagent', 'Required']:
+                return None
+            elif ret.property_access == []:
+                return None
+        return ret
 
     def and_test(self, stmt):
         for node in stmt.children:
@@ -67,7 +73,8 @@ class LAReturnType(ExprLookAhead):
             self.visit(node)
 
     def var(self, var):
-        pass
+        if var.children[0].value in self.compiler.device_table:
+            return self.compiler.device_table[var.children[0].value]
 
     def const_true(self, token):
         pass

@@ -10,9 +10,18 @@ class VarType(BaseType):
 
 
 class Device(BaseType):
-    def __init__(self, device: str, prop: str):
+    def __init__(self, device: str=None, name: str=None, property_access = None):
         self.device = device
-        self.prop = prop
+        self.name = name
+        self.property_access = property_access if property_access else []
+
+    @classmethod
+    def access_prop(cls, device, property_access):
+        lst = device.property_access.copy()
+        lst.append(property_access)
+        return cls(device.device,
+                   name=device.name,
+                   property_access=lst)
 
 
 class Variable:

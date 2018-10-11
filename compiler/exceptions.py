@@ -15,6 +15,7 @@ class MipsCodeError(MipsException):
 class MipsUnboundLocalError(MipsCodeError):
     """"""
     def __init__(self, name):
+        self.name = name
         super().__init__(f"local variable '{name}' referenced before assignment")
 
 
@@ -32,3 +33,8 @@ class MipsNameError(MipsCodeError):
 class MipsTypeError(MipsCodeError):
     """TypeError: unsupported operand type(s) for +: 'NoneType' and 'int'"""
     pass
+
+
+class MipsAttributeCantSetError(MipsCodeError):
+    def __init__(self, attrib):
+        super().__init__(f"AttributeError: can't set attribute '{attrib}'")

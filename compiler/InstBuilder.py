@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 
 from compiler.Visitor import Visitor
-from compiler.exceptions import MipsCodeError, MipsUnboundLocalError, MipsAttributeError, MipsNameError
+from compiler.exceptions import MipsCodeError, MipsUnboundLocalError, MipsAttributeError, MipsNameError, \
+    MipsAttributeCantSetError
 from compiler.look_ahead_can_assign import LACanAssign
 from compiler.look_ahead_expr_rearrange import LAExprRearrange
 from compiler.look_ahead_return_type import LAReturnType
@@ -17,7 +18,7 @@ class InstBuilder(Visitor):
         self._free_register_counter = 0
         self.idtable = {'out': 'o'}
         self.device_table = {'db': Device('db', 'Socket')}
-        self.vtable = {'label': Function(self._label, Device), 'device': Function(self._label, Device)}
+        self.vtable = {'label': Function(self._label, Device()), 'device': Function(self._label, Device())}
         self.labels = {}
         self.label = 0
         self.program = []
@@ -116,6 +117,8 @@ class InstBuilder(Visitor):
 
         if name in self.idtable:
             return f'{self.idtable[name]}'
+        elif name in self.device_table:
+            return self.device_table[name]
         elif assignment:
             self.idtable[name] = self.cur_register
             self._free_register_counter += 1
@@ -195,7 +198,7 @@ class InstBuilder(Visitor):
         expr = stmt.children[1]
         expr_return_type = LAReturnType(self, expr).return_type
 
-        if expr_return_type == Device:
+        if isinstance(expr_return_type, Device):
             r0 = self.visit(expr, assignment=True)
             self.device_table[stmt.children[0].children[0].value] = r0
             return
@@ -210,7 +213,7 @@ class InstBuilder(Visitor):
             t0 = self.visit(expr, store_dst=t0)
 
         if isinstance(dst, Device):
-            self._save_attr(t0, dst.device, dst.prop)
+            self._save_attr(t0, dst, dst.property_access[0])
         elif not expr_can_assign:
             self._push_copy_inst(src=t0, dst=dst)
 
@@ -391,51 +394,56 @@ class InstBuilder(Visitor):
             with self.free_register() as r0:
                 r0 = self.visit(index_expr, store_dst=r0)
             dst = self.cur_stack_dst(store_dst=store_dst)
-            prop = dot_access_expr.children[1]
-            device = dot_access_expr.children[0].children[0]
-            self._load_attr_slot(dst=dst, device=device, prop=prop, slot=r0)
+
+            device = self.visit(dot_access_expr)
+            self._load_attr_slot(dst=dst, device=device, prop=device.property_access[0], slot=r0)
             return dst
         else:
             raise Exception("Slot access read only")
 
-    def dot_access(self, expr, store_dst=None, **kwargs):
+    def dot_access(self, expr, store_dst=None, assignment=None, **kwargs):
         if store_dst:
             dst = self.cur_stack_dst(store_dst=store_dst)
             prop = expr.children[1]
-            device = expr.children[0].children[0]
-            if device not in self.device_table:
-                if device in self.idtable:
+            device = self.visit(expr.children[0], store_dst=store_dst)
+            if device not in self.device_table.values():
+                if device in self.idtable.values():
                     raise MipsAttributeError(device, prop)
+                if assignment:
+                    raise MipsNameError(device)
                 raise MipsUnboundLocalError(device)
-            self._load_attr(dst=dst, device=device, prop=prop)
+            if prop.startswith("Reagent"):
+                # Handle Reagents as a special case property
+                args = prop.split('_')
+                self._load_reagent(dst=dst, device=device, mode_str=args[1], reagent_str=args[2])
+            else:
+                self._load_attr(dst=dst, device=device, prop=prop)
             return dst
         else:
+            prop = expr.children[1].value
+            try:
+                device = self.visit(expr.children[0], store_dst=store_dst)
+            except MipsUnboundLocalError as exc:
+                raise MipsNameError(exc.name)
+            ret = device.access_prop(device, property_access=prop)
+            return ret
 
-            prop = expr.children[1]
-            device = expr.children[0].children[0]
-
-            return Device(device, prop)
-
-    def _load_attr(self, dst, device: Token, prop: Token):
+    def _load_attr(self, dst, device: Device, prop: Token):
         prop_str = prop.value
-        if device in self.device_table:
-            device = self.device_table[device].device
-        else:
+        if device not in self.device_table.values():
             raise MipsAttributeError(device, prop_str)
-        self._add_instruction(f'l {dst} {device} {prop_str}', f'load {device} {prop_str} to {dst}')
+        self._add_instruction(f'l {dst} {device.device} {prop_str}', f'load {device.device} {prop_str} to {dst}')
 
-    def _load_attr_slot(self, dst, device: Token, prop: Token, slot):
-        prop_str = prop.value
-        if device in self.device_table:
-            device = self.device_table[device].device
-        else:
-            raise MipsAttributeError(device, prop_str)
-        self._add_instruction(f'ls {dst} {device} {slot} {prop_str}', f'load {device} {prop_str}[{slot}] to {dst}')
+    def _load_reagent(self, dst, device: Device, mode_str: str, reagent_str: str):
+        if device not in self.device_table.values():
+            raise MipsAttributeError(device, mode_str)
+        self._add_instruction(f'lr {dst} {device.device} {mode_str} {reagent_str}', f'load reagent {device.device} {mode_str} {reagent_str} to {dst}')
 
-    def _save_attr(self, var, device: Token, prop: Token):
-        if device in self.device_table:
-            device = self.device_table[device].device
-        else:
-            raise MipsNameError(device)
-        prop_str = prop.value
-        self._add_instruction(f's {device} {prop} {var}', f'save {var} to {device} {prop}')
+    def _load_attr_slot(self, dst, device: Device, prop: str, slot):
+        self._add_instruction(f'ls {dst} {device.device} {slot} {prop}', f'load {device.device} {prop}[{slot}] to {dst}')
+
+    def _save_attr(self, var, device: Device, prop: str):
+        if prop.startswith("Reagent"):
+            # Special case for Reagent where we cant assign
+            raise MipsAttributeCantSetError(prop)
+        self._add_instruction(f's {device.device} {prop} {var}', f'save {var} to {device.device} {prop}')

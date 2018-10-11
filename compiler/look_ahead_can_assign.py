@@ -11,6 +11,9 @@ class LACanAssign(ExprLookAhead):
     def dot_access(self, expr):
         return True
 
+    def attr_get(self, expr):
+        return True
+
     def loc(self, loc):
         return True
 

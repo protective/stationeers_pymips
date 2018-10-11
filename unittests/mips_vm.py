@@ -92,6 +92,8 @@ class MIPSVM:
             self._set_variable(args[1], self._get_variable((args[2], args[3])))
         elif inst == 'ls':
             self._set_variable(args[1], self._get_variable((args[2], args[4], int(float(self._get_variable(args[3]))))))
+        elif inst == 'lr':
+            self._set_variable(args[1], self._get_variable((args[2], 'Reagent', args[3], args[4])))
         elif inst == 's':
             self._set_variable((args[1], args[2]), self._get_variable(args[3]))
         elif inst == 'move':
