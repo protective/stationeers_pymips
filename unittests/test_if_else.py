@@ -8,6 +8,7 @@ out = 1 if 0 else 2
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 2
+    assert vm.mips_len == 4
 
 
 def test_if_else_ternary_true():
@@ -17,6 +18,7 @@ out = 1 if 1 else 2
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
+    assert vm.mips_len == 4
 
 
 def test_if_else_ternary_expr_l_true():
@@ -45,6 +47,7 @@ if 1 == 0:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 0
+    assert vm.mips_len == 2
 
 
 def test_if_true_eq():
@@ -55,6 +58,7 @@ if 1 == 1:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
+    assert vm.mips_len == 2
 
 
 def test_if_false():
@@ -65,6 +69,7 @@ if 0:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 0
+    assert vm.mips_len == 2
 
 
 def test_if_true():
@@ -75,6 +80,7 @@ if 1:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
+    assert vm.mips_len == 2
 
 
 def test_if_neg():
@@ -85,8 +91,7 @@ if -1:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
-
-
+    assert vm.mips_len == 2
 
 def test_if_else_false():
     program = """
@@ -98,7 +103,7 @@ else:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 2
-
+    assert vm.mips_len == 4
 
 def test_if_else_true():
     program = """
@@ -110,6 +115,7 @@ else:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
+    assert vm.mips_len == 4
 
 
 def test_if_then_else_true_false():
@@ -124,6 +130,7 @@ else:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
+    assert vm.mips_len == 7
 
 
 def test_if_then_else_true_true():
@@ -138,7 +145,7 @@ else:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 1
-
+    assert vm.mips_len == 7
 
 def test_if_then_else_false_true():
     program = """
@@ -152,7 +159,7 @@ else:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 2
-
+    assert vm.mips_len == 7
 
 def test_if_then_else_false_false():
     program = """
@@ -166,7 +173,7 @@ else:
     vm = MIPSVM(program)
     vm.execute()
     assert vm.get_variable('o') == 3
-
+    assert vm.mips_len == 7
 
 def test_if_else_ternary_false_expr():
     program = """

@@ -13,9 +13,11 @@ class MIPSVM:
         self._pc = 0
         self._no_inst = 0
         self._program = []
+        self.mips_len = None
         if program:
             mips = Compiler().compile(program)
             self.parse(mips)
+            self.mips_len = len(self._program)
             print()
             print("================================================")
             print(program)

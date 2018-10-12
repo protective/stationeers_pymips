@@ -78,16 +78,7 @@ class InstBuilder(Visitor):
     def _push_copy_inst(self, src, dst):
         self._add_instruction(f'move {dst} {src}', f'{src} -> {dst}')
 
-    def _push_conditional_jump_inst(self, condition, label):
-        if label is None:
-            self.label += 1
-            label = f'L{self.label}'
-        self.labels[label] = None
-        label_str = '{' + str(label) + '}'
-        self._add_instruction(f'bne {condition} 0 {label_str}', f'Jump to {label_str} if {condition}')
-        return label
-
-    def _push_conditional_eq_jump_inst(self, r0, r1, label, eq=True):
+    def _push_conditional_jump_inst(self, condition, label, eq=False):
         if label is None:
             self.label += 1
             label = f'L{self.label}'
@@ -96,7 +87,7 @@ class InstBuilder(Visitor):
 
         op = 'beq' if eq else 'bne'
 
-        self._add_instruction(f'{op} {r0} {r1} {label_str}', f'Jump to {label_str} if {r0} == {r1}')
+        self._add_instruction(f'{op} {condition} 0 {label_str}', f'Jump to {label_str} if {"not " if eq else ""}{condition}')
         return label
 
     def _push_jump_inst(self, label=None):
@@ -228,30 +219,32 @@ class InstBuilder(Visitor):
                 con_jump_label = self._create_label() if can_branch else None
                 t0 = self.visit(test, store_dst=t0, branch_dst=con_jump_label)
             if not can_branch:
-                con_jump_label = self._push_conditional_jump_inst(t0, None)
-            # Else stmt
-            self._recursive_if_stmt(stmt_lst[2:], exit_jump, is_expr=is_expr, store_dst=store_dst)
+                con_jump_label = self._push_conditional_jump_inst(t0, None, eq=True)
 
-            jump_label = self._push_jump_inst(exit_jump)
-            self._insert_label(con_jump_label)
             # True
-
             if is_expr:
                 with self.free_register( can_direct_access=LACanAssign(if_suite).result, store_dst=store_dst):
                     t0 = self.visit(if_suite, store_dst=store_dst)
-                self._stmt_lookahead_copy = True
                 self._push_copy_inst(src=t0, dst=self.cur_stack_dst(store_dst))
             else:
                 self.visit(if_suite)
 
-            self._insert_label(jump_label)
+            # Check
+            if stmt_lst[2:]:
+                exit_jump_label = self._push_jump_inst(exit_jump)
+
+            self._insert_label(con_jump_label)
+
+            # Elif else stmt
+            if stmt_lst[2:]:
+                self._recursive_if_stmt(stmt_lst[2:], exit_jump, is_expr=is_expr, store_dst=store_dst)
+                self._insert_label(exit_jump_label)
         elif len(stmt_lst) == 1:
             else_suite = stmt_lst[0]
 
             if is_expr:
                 with self.free_register(else_suite):
                     r0 = self.visit(else_suite)
-                self._stmt_lookahead_copy = True
                 self._push_copy_inst(src=r0, dst=self.cur_stack_dst(store_dst))
             else:
                 self.visit(else_suite)
@@ -354,12 +347,12 @@ class InstBuilder(Visitor):
                 self._add_instruction(f'sge {dst} {r0} {r1}', f'{r0} <= {r1} -> {dst}')
             elif op.value == '==':
                 if branch_dst:
-                    self._add_instruction(f'beq {r0} {r1} {branch_str} ', f'Jump to {branch_str} iff {r0} == {r1}')
+                    self._add_instruction(f'bne {r0} {r1} {branch_str} ', f'Jump to {branch_str} iff {r0} != {r1}')
                 else:
                     self._add_instruction(f'seq {dst} {r0} {r1}', f'{r0} == {r1} -> {dst}')
             elif op.value == '!=':
                 if branch_dst:
-                    self._add_instruction(f'bne {r0} {r1} {branch_str} ', f'Jump to {branch_str} iff {r0} != {r1}')
+                    self._add_instruction(f'beq {r0} {r1} {branch_str} ', f'Jump to {branch_str} iff {r0} == {r1}')
                 else:
                     self._add_instruction(f'sne {dst} {r0} {r1}', f'{r0} != {r1} -> {dst}')
         return dst
