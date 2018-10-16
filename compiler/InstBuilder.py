@@ -184,10 +184,19 @@ class InstBuilder(Visitor):
         self._recursive_if_stmt(n_lst, exit_jump=None, is_expr=True, store_dst=store_dst)
         return store_dst
 
+    def _update_assignment_expr(self, src,  op, expr)->Tree:
+        return Tree('expr', [src, Token("", op[0]), expr])
+
     def assignment_stmt(self, stmt):
 
         id = stmt.children[0]
-        expr = stmt.children[1]
+        op = stmt.children[1].children[0]
+
+        if op.value == "=":
+            expr = stmt.children[2]
+        else:
+            expr = self._update_assignment_expr(id, op, stmt.children[2])
+
         expr_return_type = LAReturnType(self, expr).return_type
 
         if isinstance(expr_return_type, Device):
@@ -362,6 +371,9 @@ class InstBuilder(Visitor):
 
     def subscript(self, expr, store_dst=None):
         return self.visit(expr.children[0],  store_dst=store_dst)
+
+    def expr(self, expr, store_dst=None, **kwargs):
+        return self.reduce_expr(expr, store_dst=store_dst)
 
     def term(self, expr, store_dst=None, **kwargs):
         return self.reduce_expr(expr, store_dst=store_dst)

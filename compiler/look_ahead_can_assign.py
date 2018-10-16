@@ -23,6 +23,9 @@ class LACanAssign(ExprLookAhead):
     def arith_expr(self, expr):
         return True
 
+    def expr(self, expr):
+        return True
+
     def term(self, expr):
         return True
 

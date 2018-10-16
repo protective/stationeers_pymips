@@ -5,9 +5,9 @@ root: (_NEWLINE | stmt)*
 ?simple_stmt: small_stmt (";" small_stmt)* [";"] _NEWLINE
 ?small_stmt: (expr_stmt | pass_stmt | flow_stmt)
 ?expr_stmt: test -> stmt
-         | test "=" test -> assignment_stmt
+         | test augassign test -> assignment_stmt
 
-!augassign: ("+=" | "-=" | "*=" | "/=")
+!augassign: ("=" | "+=" | "-=" | "*=" | "/=")
 // For normal and annotated assignments, additional restrictions enforced by the interpreter
 pass_stmt: "pass"
 ?flow_stmt: break_stmt | continue_stmt | yield_stmt

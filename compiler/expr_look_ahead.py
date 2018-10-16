@@ -14,6 +14,9 @@ class ExprLookAhead(Visitor):
     def unary_operator(self, right):
         self.visit(right)
 
+    def expr(self, expr):
+        return self.reduce_expr(expr)
+
     def term(self, expr):
         return self.reduce_expr(expr)
 
